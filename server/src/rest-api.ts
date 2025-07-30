@@ -14,6 +14,7 @@ interface UrlCacheEntry {
   id: string;
   original_url: string;
   expiration_date: string | null;
+  utm_parameters: any;
   lastAccessed: number;
 }
 
@@ -218,6 +219,7 @@ app.get("/:shortCode", async (req: any, res: any) => {
         id: url.id,
         original_url: url.original_url,
         expiration_date: url.expiration_date,
+        utm_parameters: url.utm_parameters,
         lastAccessed: Date.now()
       };
 
@@ -235,7 +237,17 @@ app.get("/:shortCode", async (req: any, res: any) => {
       .increment("click_count", 1)
       .catch(err => console.error("Error updating click count:", err));
 
-    res.redirect(302, urlData.original_url);
+    let redirectUrl = urlData.original_url;
+    
+    if (urlData.utm_parameters && Object.keys(urlData.utm_parameters).length > 0) {
+      const url = new URL(urlData.original_url);
+      Object.entries(urlData.utm_parameters).forEach(([key, value]) => {
+        url.searchParams.append(key, value as string);
+      });
+      redirectUrl = url.toString();
+    }
+
+    res.redirect(302, redirectUrl);
 
   } catch (error) {
     console.error("Error redirecting:", error);
